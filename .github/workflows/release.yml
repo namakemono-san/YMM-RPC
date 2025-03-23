@@ -7,6 +7,7 @@ on:
 
 jobs:
   build_and_release:
+    name: Build and Release
     runs-on: windows-latest
 
     steps:
@@ -24,9 +25,10 @@ jobs:
         run: dotnet publish --configuration Release -o publish
 
       - name: Create ZIP
-        run: |
-          cd publish
-          zip -r YmmRPC.zip YmmRPC.dll DiscordRPC.dll
+        run: powershell Compress-Archive -Path "publish\YmmRPC.dll","publish\DiscordRPC.dll" -DestinationPath "publish\YmmRPC.zip"
+
+      - name: Rename ZIP to .ymme
+        run: powershell Move-Item publish\YmmRPC.zip publish\YmmRPC.ymme
 
       - name: Create Release
         uses: ncipollo/release-action@v1
