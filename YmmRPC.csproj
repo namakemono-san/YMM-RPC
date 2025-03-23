@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+        <UseWPF>true</UseWPF>
+        <RootNamespace>YmmRPC</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Reference Include="D:\Application\YukkuriMovieMaker_v4\YukkuriMovieMaker.Controls.dll">
+        <Private>false</Private>
+        <CopyLocal>false</CopyLocal>
+      </Reference>
+      <Reference Include="D:\Application\YukkuriMovieMaker_v4\YukkuriMovieMaker.Plugin.dll">
+        <Private>false</Private>
+        <CopyLocal>false</CopyLocal>
+      </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
+    </ItemGroup>
+
+</Project>
