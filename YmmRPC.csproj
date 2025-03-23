@@ -23,4 +23,8 @@
       <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Content Include=".github\workflows\release.yml" />
+    </ItemGroup>
+
 </Project>

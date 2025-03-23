@@ -28,11 +28,14 @@ namespace YmmRPC
             client.Initialize();
             
             // TODO: 作業内容を表示したい。
-            // client.SetPresence(new RichPresence()
-            // {
-            //     Details = "test123",
-            //     State = "アイドル中",
-            // });	
+            client.SetPresence(new RichPresence()
+            {
+                Assets = new Assets()
+                {
+                    LargeImageKey = "icon",
+                    LargeImageText = "YMM-RPC v0.1.0"
+                }
+            });	
         }
     }
 }
