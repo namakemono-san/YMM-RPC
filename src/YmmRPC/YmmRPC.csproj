@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+        <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
         <UseWPF>true</UseWPF>
         <RootNamespace>YmmRPC</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -15,6 +15,13 @@
 
     <ItemGroup>
         <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
+        <PackageReference Include="Costura.Fody" Version="5.7.0">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Fody" Version="6.8.2">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
-
+    
 </Project>
