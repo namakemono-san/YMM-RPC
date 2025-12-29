@@ -1,4 +1,6 @@
-﻿using DiscordRPC;
+﻿using System.Diagnostics;
+using System.Windows;
+using DiscordRPC;
 using DiscordRPC.Logging;
 using YukkuriMovieMaker.Plugin;
 using YmmRPC.Settings;
@@ -6,11 +8,12 @@ using YmmRPC.Settings;
 namespace YmmRPC;
 
 [PluginDetails(AuthorName = "namakemono-san", ContentId = "")]
-public abstract class YmmRpcPlugin : IPlugin, IDisposable
+// ReSharper disable once ClassNeverInstantiated.Global
+public class YmmRpcPlugin : IPlugin, IDisposable
 {
     public string Name => "YMM-RPC";
-    
-    private const string ClientId = "1353376132732420136";
+
+    private static readonly string ClientId = IsLiteEdition() ? "1455192227734098075" : "1353376132732420136";
     private const string Version = "0.3.0";
     private const int UpdateIntervalMs = 15000;
 
@@ -20,7 +23,7 @@ public abstract class YmmRpcPlugin : IPlugin, IDisposable
     private static volatile bool _updateRequested;
     private bool _disposed;
 
-    protected YmmRpcPlugin()
+    public YmmRpcPlugin()
     {
         _startTime = DateTime.UtcNow;
         InitializeClient();
@@ -80,7 +83,7 @@ public abstract class YmmRpcPlugin : IPlugin, IDisposable
         return new RichPresence
         {
             Details = "動画を編集中...",
-            State = "Working on YMM4",
+            State = IsLiteEdition() ? "Working on YMM4 Lite" : "Working on YMM4",
             Assets = new Assets
             {
                 LargeImageKey = "icon",
@@ -146,5 +149,15 @@ public abstract class YmmRpcPlugin : IPlugin, IDisposable
         _client = null;
 
         GC.SuppressFinalize(this);
+    }
+    
+    private static bool IsLiteEdition()
+    {
+        var exeName = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+        if (exeName.Contains("Lite", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var title = Application.Current?.MainWindow?.Title ?? "";
+        return title.Contains("Lite", StringComparison.OrdinalIgnoreCase);
     }
 }
