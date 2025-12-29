@@ -8,7 +8,8 @@ YMM4 上で作業している状態を、Discord クライアント上のステ�
 
 ## 動作確認済みバージョン
 
-- YukkuriMovieMaker v4.38.1.0
+- YukkuriMovieMaker v4.47.0.5
+- YukkuriMovieMaker v4.47.0.5 Lite
 
 ## 前提条件
 

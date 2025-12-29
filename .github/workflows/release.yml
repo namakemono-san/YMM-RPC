@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - '*'
+      - "*"
 
 jobs:
   build_and_release:
@@ -19,7 +19,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: "9.0.x"
 
       - name: Build
         run: dotnet build --configuration Release
@@ -27,8 +27,11 @@ jobs:
       - name: Publish
         run: dotnet publish --configuration Release -o publish
 
+      - name: Copy README to publish folder
+        run: Copy-Item ".github/assets/readme.txt" -Destination "publish/readme.txt"
+
       - name: Create ZIP
-        run: powershell Compress-Archive -Path "publish\YmmRPC.dll","publish\DiscordRPC.dll" -DestinationPath "publish\YmmRPC.zip"
+        run: powershell Compress-Archive -Path "publish\YmmRPC.dll", "publish\readme.txt" -DestinationPath "publish\YmmRPC.zip"
 
       - name: Rename ZIP to .ymme
         run: powershell Move-Item publish\YmmRPC.zip publish\YmmRPC.ymme
