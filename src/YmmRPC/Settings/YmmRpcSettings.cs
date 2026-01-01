@@ -25,6 +25,12 @@ public class YmmRpcSettings : SettingsBase<YmmRpcSettings>, INotifyPropertyChang
         set => SetField(ref field, value);
     }
 
+    public bool IsShowProject
+    {
+        get;
+        set => SetField(ref field, value);
+    } = true;
+    
     public string CustomRpcDetails
     {
         get;
@@ -100,6 +106,5 @@ public class YmmRpcSettings : SettingsBase<YmmRpcSettings>, INotifyPropertyChang
         if (EqualityComparer<T>.Default.Equals(field, value)) return;
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        YmmRpcPlugin.RequestUpdate();
     }
 }

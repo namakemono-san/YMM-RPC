@@ -9,12 +9,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Reference Include="YukkuriMovieMaker.Plugin" HintPath="..\..\libs\YukkuriMovieMaker.Plugin.dll" Private="true" />
-        <Reference Include="YukkuriMovieMaker.Controls" HintPath="..\..\libs\YukkuriMovieMaker.Controls.dll" Private="true" />
-    </ItemGroup>
-
-    <ItemGroup>
+        <Reference Include="YukkuriMovieMaker.Plugin" HintPath="..\..\libs\YukkuriMovieMaker.Plugin.dll" Private="false">
+            <ExcludeAssets>runtime</ExcludeAssets>
+        </Reference>
+        <Reference Include="YukkuriMovieMaker.Controls" HintPath="..\..\libs\YukkuriMovieMaker.Controls.dll" Private="false">
+            <ExcludeAssets>runtime</ExcludeAssets>
+        </Reference>
+        
         <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
+        
         <PackageReference Include="Costura.Fody" Version="5.7.0">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
