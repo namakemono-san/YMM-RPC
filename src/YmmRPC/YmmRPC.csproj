@@ -9,10 +9,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Reference Include="YukkuriMovieMaker.Plugin" HintPath="..\..\libs\YukkuriMovieMaker.Plugin.dll" Private="false">
+        <Reference Include="YukkuriMovieMaker.Plugin" HintPath="$(YMM4_PATH)\YukkuriMovieMaker.Plugin.dll" Private="false">
             <ExcludeAssets>runtime</ExcludeAssets>
         </Reference>
-        <Reference Include="YukkuriMovieMaker.Controls" HintPath="..\..\libs\YukkuriMovieMaker.Controls.dll" Private="false">
+        <Reference Include="YukkuriMovieMaker.Controls" HintPath="$(YMM4_PATH)\YukkuriMovieMaker.Controls.dll" Private="false">
             <ExcludeAssets>runtime</ExcludeAssets>
         </Reference>
         
