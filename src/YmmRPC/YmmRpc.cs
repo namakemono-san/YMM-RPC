@@ -20,6 +20,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
     private const string Version = "0.3.1";
     private const int UpdateIntervalMs = 15000;
 
+    private static readonly object _lock = new();
     private static DiscordRpcClient? _client;
     private static Timer? _updateTimer;
     private static DateTime _startTime;
@@ -35,28 +36,34 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static void InitializeClient()
     {
-        if (_client is { IsDisposed: false }) return;
-
-        var clientId = GetIsLiteEdition() ? ClientIdLite : ClientIdNormal;
-
-        _client = new DiscordRpcClient(clientId)
+        lock (_lock)
         {
-            Logger = new ConsoleLogger { Level = LogLevel.Warning }
-        };
+            if (_client is { IsDisposed: false }) return;
 
-        _client.OnReady += (_, e) => Console.WriteLine($"[YMM-RPC] Connected: {e.User.Username}");
-        _client.OnError += (_, e) => Console.WriteLine($"[YMM-RPC] Error: {e.Message}");
+            var clientId = GetIsLiteEdition() ? ClientIdLite : ClientIdNormal;
 
-        _client.Initialize();
+            _client = new DiscordRpcClient(clientId)
+            {
+                Logger = new ConsoleLogger { Level = LogLevel.Warning }
+            };
+
+            _client.OnReady += (_, e) => Console.WriteLine($"[YMM-RPC] Connected: {e.User.Username}");
+            _client.OnError += (_, e) => Console.WriteLine($"[YMM-RPC] Error: {e.Message}");
+
+            _client.Initialize();
+        }
     }
 
     private static void StartUpdateTimer()
     {
-        _updateTimer?.Dispose();
-        _updateTimer = new Timer(_ =>
+        lock (_lock)
         {
-            SafeUpdatePresence();
-        }, null, UpdateIntervalMs, UpdateIntervalMs);
+            _updateTimer?.Dispose();
+            _updateTimer = new Timer(_ =>
+            {
+                SafeUpdatePresence();
+            }, null, UpdateIntervalMs, UpdateIntervalMs);
+        }
     }
 
     private static void SafeUpdatePresence()
@@ -79,21 +86,24 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static void UpdatePresence()
     {
-        if (_client is not { IsInitialized: true }) return;
-
-        var settings = YmmRpcSettings.Default;
-
-        if (!settings.IsEnabled)
+        lock (_lock)
         {
-            _client.ClearPresence();
-            return;
+            if (_client is not { IsInitialized: true }) return;
+
+            var settings = YmmRpcSettings.Default;
+
+            if (!settings.IsEnabled)
+            {
+                _client.ClearPresence();
+                return;
+            }
+
+            var presence = settings.CustomRpcEnabled
+                ? BuildCustomPresence(settings)
+                : BuildDefaultPresence();
+
+            _client.SetPresence(presence);
         }
-
-        var presence = settings.CustomRpcEnabled
-            ? BuildCustomPresence(settings)
-            : BuildDefaultPresence();
-
-        _client.SetPresence(presence);
     }
 
     private static string? GetCurrentProjectName()
@@ -256,15 +266,18 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _updateTimer?.Dispose();
-        _updateTimer = null;
-
-        if (_client is { IsDisposed: false })
+        lock (_lock)
         {
-            _client.ClearPresence();
-            _client.Dispose();
+            _updateTimer?.Dispose();
+            _updateTimer = null;
+
+            if (_client is { IsDisposed: false })
+            {
+                _client.ClearPresence();
+                _client.Dispose();
+            }
+            _client = null;
         }
-        _client = null;
 
         GC.SuppressFinalize(this);
     }
