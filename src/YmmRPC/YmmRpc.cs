@@ -146,12 +146,15 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         
         if (!isInitialized) return;
 
-        // At this point, client is guaranteed to be non-null and initialized
+        // At this point, client should be non-null and initialized
+        // But we'll be defensive in case of edge cases
+        if (client == null) return;
+        
         var settings = YmmRpcSettings.Default;
 
         if (!settings.IsEnabled)
         {
-            client!.ClearPresence();
+            client.ClearPresence();
             return;
         }
 
@@ -159,7 +162,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             ? BuildCustomPresence(settings)
             : BuildDefaultPresence();
 
-        client!.SetPresence(presence);
+        client.SetPresence(presence);
     }
 
     private static string? GetCurrentProjectName()
