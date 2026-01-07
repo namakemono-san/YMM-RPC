@@ -56,10 +56,8 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
         lock (_lock)
         {
-            // Double-check that client wasn't initialized by another thread
             if (_client is { IsDisposed: false })
             {
-                // Another thread initialized it, dispose the one we created
                 newClient.Dispose();
                 return;
             }
@@ -77,7 +75,6 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             catch (Exception ex)
             {
                 Console.WriteLine($"[YMM-RPC] Failed to initialize client: {ex.Message}");
-                // Clear the client on initialization failure
                 lock (_lock)
                 {
                     _client = null;
@@ -109,7 +106,6 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         }
         catch
         {
-            // If timer creation or assignment failed, clean up
             newTimer?.Dispose();
             throw;
         }
@@ -146,8 +142,6 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         
         if (!isInitialized) return;
 
-        // At this point, client should be non-null and initialized
-        // But we'll be defensive in case of edge cases
         if (client == null) return;
         
         var settings = YmmRpcSettings.Default;
@@ -293,10 +287,8 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static bool GetIsLiteEdition()
     {
-        // Fast path - value already cached (volatile read)
         if (_isLiteEdition.HasValue) return _isLiteEdition.Value;
 
-        // Slow path - determine if Lite edition (outside lock to prevent contention)
         var exeName = Process.GetCurrentProcess().MainModule?.FileName ?? "";
         bool isLite;
         
@@ -320,7 +312,6 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             }
         }
 
-        // Double-check and set value
         lock (_lock)
         {
             if (!_isLiteEdition.HasValue)
