@@ -29,7 +29,10 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     public YmmRpcPlugin()
     {
-        _startTime = DateTime.UtcNow;
+        lock (_lock)
+        {
+            _startTime = DateTime.UtcNow;
+        }
         InitializeClient();
         StartUpdateTimer();
     }
@@ -86,24 +89,30 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static void UpdatePresence()
     {
+        DiscordRpcClient? client;
+        bool isInitialized;
+        
         lock (_lock)
         {
-            if (_client is not { IsInitialized: true }) return;
-
-            var settings = YmmRpcSettings.Default;
-
-            if (!settings.IsEnabled)
-            {
-                _client.ClearPresence();
-                return;
-            }
-
-            var presence = settings.CustomRpcEnabled
-                ? BuildCustomPresence(settings)
-                : BuildDefaultPresence();
-
-            _client.SetPresence(presence);
+            client = _client;
+            isInitialized = client is { IsInitialized: true };
         }
+        
+        if (!isInitialized || client == null) return;
+
+        var settings = YmmRpcSettings.Default;
+
+        if (!settings.IsEnabled)
+        {
+            client.ClearPresence();
+            return;
+        }
+
+        var presence = settings.CustomRpcEnabled
+            ? BuildCustomPresence(settings)
+            : BuildDefaultPresence();
+
+        client.SetPresence(presence);
     }
 
     private static string? GetCurrentProjectName()
@@ -166,6 +175,12 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             details = "動画を編集中...";
         }
 
+        DateTime startTime;
+        lock (_lock)
+        {
+            startTime = _startTime;
+        }
+
         return new RichPresence
         {
             Details = details,
@@ -175,7 +190,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
                 LargeImageKey = "icon",
                 LargeImageText = $"YMM-RPC v{Version}"
             },
-            Timestamps = new Timestamps { Start = _startTime }
+            Timestamps = new Timestamps { Start = startTime }
         };
     }
 
@@ -189,6 +204,12 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         var largeImageText = ReplacePlaceholders(settings.CustomRpcLargeImageText, displayName);
         var smallImageText = ReplacePlaceholders(settings.CustomRpcSmallImageText, displayName);
 
+        DateTime startTime;
+        lock (_lock)
+        {
+            startTime = _startTime;
+        }
+
         var presence = new RichPresence
         {
             Details = NullIfEmpty(details),
@@ -200,7 +221,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
                 SmallImageKey = NullIfEmpty(settings.CustomRpcSmallImageKey),
                 SmallImageText = NullIfEmpty(smallImageText)
             },
-            Timestamps = new Timestamps { Start = _startTime }
+            Timestamps = new Timestamps { Start = startTime }
         };
 
         if (!settings.CustomRpcEnableButtons) return presence;
