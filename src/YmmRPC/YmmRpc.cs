@@ -39,21 +39,30 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static void InitializeClient()
     {
+        DiscordRpcClient? newClient = null;
+        bool shouldInitialize = false;
+        
         lock (_lock)
         {
             if (_client is { IsDisposed: false }) return;
 
             var clientId = GetIsLiteEdition() ? ClientIdLite : ClientIdNormal;
 
-            _client = new DiscordRpcClient(clientId)
+            newClient = new DiscordRpcClient(clientId)
             {
                 Logger = new ConsoleLogger { Level = LogLevel.Warning }
             };
 
-            _client.OnReady += (_, e) => Console.WriteLine($"[YMM-RPC] Connected: {e.User.Username}");
-            _client.OnError += (_, e) => Console.WriteLine($"[YMM-RPC] Error: {e.Message}");
+            newClient.OnReady += (_, e) => Console.WriteLine($"[YMM-RPC] Connected: {e.User.Username}");
+            newClient.OnError += (_, e) => Console.WriteLine($"[YMM-RPC] Error: {e.Message}");
 
-            _client.Initialize();
+            _client = newClient;
+            shouldInitialize = true;
+        }
+
+        if (shouldInitialize && newClient != null)
+        {
+            newClient.Initialize();
         }
     }
 
@@ -299,17 +308,24 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         if (_disposed) return;
         _disposed = true;
 
+        Timer? timerToDispose = null;
+        DiscordRpcClient? clientToDispose = null;
+
         lock (_lock)
         {
-            _updateTimer?.Dispose();
+            timerToDispose = _updateTimer;
             _updateTimer = null;
 
-            if (_client is { IsDisposed: false })
-            {
-                _client.ClearPresence();
-                _client.Dispose();
-            }
+            clientToDispose = _client;
             _client = null;
+        }
+
+        timerToDispose?.Dispose();
+
+        if (clientToDispose is { IsDisposed: false })
+        {
+            clientToDispose.ClearPresence();
+            clientToDispose.Dispose();
         }
 
         GC.SuppressFinalize(this);
