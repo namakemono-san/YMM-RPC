@@ -45,17 +45,28 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         lock (_lock)
         {
             if (_client is { IsDisposed: false }) return;
+        }
 
-            var clientId = GetIsLiteEdition() ? ClientIdLite : ClientIdNormal;
+        var clientId = GetIsLiteEdition() ? ClientIdLite : ClientIdNormal;
 
-            newClient = new DiscordRpcClient(clientId)
+        newClient = new DiscordRpcClient(clientId)
+        {
+            Logger = new ConsoleLogger { Level = LogLevel.Warning }
+        };
+
+        newClient.OnReady += (_, e) => Console.WriteLine($"[YMM-RPC] Connected: {e.User.Username}");
+        newClient.OnError += (_, e) => Console.WriteLine($"[YMM-RPC] Error: {e.Message}");
+
+        lock (_lock)
+        {
+            // Double-check that client wasn't initialized by another thread
+            if (_client is { IsDisposed: false })
             {
-                Logger = new ConsoleLogger { Level = LogLevel.Warning }
-            };
-
-            newClient.OnReady += (_, e) => Console.WriteLine($"[YMM-RPC] Connected: {e.User.Username}");
-            newClient.OnError += (_, e) => Console.WriteLine($"[YMM-RPC] Error: {e.Message}");
-
+                // Another thread initialized it, dispose the one we created
+                newClient.Dispose();
+                return;
+            }
+            
             _client = newClient;
             shouldInitialize = true;
         }
@@ -68,14 +79,19 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static void StartUpdateTimer()
     {
+        Timer? oldTimer = null;
+        Timer? newTimer = new Timer(_ =>
+        {
+            SafeUpdatePresence();
+        }, null, UpdateIntervalMs, UpdateIntervalMs);
+        
         lock (_lock)
         {
-            _updateTimer?.Dispose();
-            _updateTimer = new Timer(_ =>
-            {
-                SafeUpdatePresence();
-            }, null, UpdateIntervalMs, UpdateIntervalMs);
+            oldTimer = _updateTimer;
+            _updateTimer = newTimer;
         }
+        
+        oldTimer?.Dispose();
     }
 
     private static void SafeUpdatePresence()
