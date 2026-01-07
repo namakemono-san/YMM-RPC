@@ -70,7 +70,20 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
         if (shouldInitialize)
         {
-            newClient.Initialize();
+            try
+            {
+                newClient.Initialize();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[YMM-RPC] Failed to initialize client: {ex.Message}");
+                // Clear the client on initialization failure
+                lock (_lock)
+                {
+                    _client = null;
+                }
+                newClient.Dispose();
+            }
         }
     }
 
@@ -131,13 +144,14 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             isInitialized = client is { IsInitialized: true };
         }
         
-        if (!isInitialized || client == null) return;
+        if (!isInitialized) return;
 
+        // At this point, client is guaranteed to be non-null and initialized
         var settings = YmmRpcSettings.Default;
 
         if (!settings.IsEnabled)
         {
-            client.ClearPresence();
+            client!.ClearPresence();
             return;
         }
 
@@ -145,7 +159,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             ? BuildCustomPresence(settings)
             : BuildDefaultPresence();
 
-        client.SetPresence(presence);
+        client!.SetPresence(presence);
     }
 
     private static string? GetCurrentProjectName()
