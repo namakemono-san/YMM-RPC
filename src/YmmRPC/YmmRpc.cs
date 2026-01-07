@@ -29,10 +29,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     public YmmRpcPlugin()
     {
-        lock (_lock)
-        {
-            _startTime = DateTime.UtcNow;
-        }
+        _startTime = DateTime.UtcNow;
         InitializeClient();
         StartUpdateTimer();
     }
@@ -80,18 +77,29 @@ public class YmmRpcPlugin : IPlugin, IDisposable
     private static void StartUpdateTimer()
     {
         Timer? oldTimer = null;
-        Timer? newTimer = new Timer(_ =>
-        {
-            SafeUpdatePresence();
-        }, null, UpdateIntervalMs, UpdateIntervalMs);
+        Timer? newTimer = null;
         
-        lock (_lock)
+        try
         {
-            oldTimer = _updateTimer;
-            _updateTimer = newTimer;
+            newTimer = new Timer(_ =>
+            {
+                SafeUpdatePresence();
+            }, null, UpdateIntervalMs, UpdateIntervalMs);
+            
+            lock (_lock)
+            {
+                oldTimer = _updateTimer;
+                _updateTimer = newTimer;
+            }
+            
+            oldTimer?.Dispose();
         }
-        
-        oldTimer?.Dispose();
+        catch
+        {
+            // If timer creation or assignment failed, clean up
+            newTimer?.Dispose();
+            throw;
+        }
     }
 
     private static void SafeUpdatePresence()
@@ -200,12 +208,6 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             details = "動画を編集中...";
         }
 
-        DateTime startTime;
-        lock (_lock)
-        {
-            startTime = _startTime;
-        }
-
         return new RichPresence
         {
             Details = details,
@@ -215,7 +217,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
                 LargeImageKey = "icon",
                 LargeImageText = $"YMM-RPC v{Version}"
             },
-            Timestamps = new Timestamps { Start = startTime }
+            Timestamps = new Timestamps { Start = _startTime }
         };
     }
 
@@ -229,12 +231,6 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         var largeImageText = ReplacePlaceholders(settings.CustomRpcLargeImageText, displayName);
         var smallImageText = ReplacePlaceholders(settings.CustomRpcSmallImageText, displayName);
 
-        DateTime startTime;
-        lock (_lock)
-        {
-            startTime = _startTime;
-        }
-
         var presence = new RichPresence
         {
             Details = NullIfEmpty(details),
@@ -246,7 +242,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
                 SmallImageKey = NullIfEmpty(settings.CustomRpcSmallImageKey),
                 SmallImageText = NullIfEmpty(smallImageText)
             },
-            Timestamps = new Timestamps { Start = startTime }
+            Timestamps = new Timestamps { Start = _startTime }
         };
 
         if (!settings.CustomRpcEnableButtons) return presence;
@@ -280,42 +276,44 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static bool GetIsLiteEdition()
     {
+        // Fast path - value already cached
         lock (_lock)
         {
             if (_isLiteEdition.HasValue) return _isLiteEdition.Value;
         }
 
+        // Slow path - determine if Lite edition (outside lock to prevent contention)
         var exeName = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+        bool isLite;
+        
         if (exeName.Contains("Lite", StringComparison.OrdinalIgnoreCase))
         {
-            lock (_lock)
+            isLite = true;
+        }
+        else
+        {
+            try
             {
-                _isLiteEdition = true;
+                isLite = Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    var title = Application.Current?.MainWindow?.Title ?? "";
+                    return title.Contains("Lite", StringComparison.OrdinalIgnoreCase);
+                }) ?? false;
             }
-            return true;
+            catch
+            {
+                isLite = false;
+            }
         }
 
-        try
+        // Double-check and set value
+        lock (_lock)
         {
-            var result = Application.Current?.Dispatcher?.Invoke(() =>
+            if (!_isLiteEdition.HasValue)
             {
-                var title = Application.Current?.MainWindow?.Title ?? "";
-                return title.Contains("Lite", StringComparison.OrdinalIgnoreCase);
-            }) ?? false;
-
-            lock (_lock)
-            {
-                _isLiteEdition = result;
+                _isLiteEdition = isLite;
             }
-            return result;
-        }
-        catch
-        {
-            lock (_lock)
-            {
-                _isLiteEdition = false;
-            }
-            return false;
+            return _isLiteEdition.Value;
         }
     }
 
