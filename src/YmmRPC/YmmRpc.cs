@@ -68,7 +68,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             shouldInitialize = true;
         }
 
-        if (shouldInitialize && newClient != null)
+        if (shouldInitialize)
         {
             newClient.Initialize();
         }
@@ -276,11 +276,8 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static bool GetIsLiteEdition()
     {
-        // Fast path - value already cached
-        lock (_lock)
-        {
-            if (_isLiteEdition.HasValue) return _isLiteEdition.Value;
-        }
+        // Fast path - value already cached (volatile read)
+        if (_isLiteEdition.HasValue) return _isLiteEdition.Value;
 
         // Slow path - determine if Lite edition (outside lock to prevent contention)
         var exeName = Process.GetCurrentProcess().MainModule?.FileName ?? "";
