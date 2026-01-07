@@ -255,12 +255,18 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static bool GetIsLiteEdition()
     {
-        if (_isLiteEdition.HasValue) return _isLiteEdition.Value;
+        lock (_lock)
+        {
+            if (_isLiteEdition.HasValue) return _isLiteEdition.Value;
+        }
 
         var exeName = Process.GetCurrentProcess().MainModule?.FileName ?? "";
         if (exeName.Contains("Lite", StringComparison.OrdinalIgnoreCase))
         {
-            _isLiteEdition = true;
+            lock (_lock)
+            {
+                _isLiteEdition = true;
+            }
             return true;
         }
 
@@ -272,12 +278,18 @@ public class YmmRpcPlugin : IPlugin, IDisposable
                 return title.Contains("Lite", StringComparison.OrdinalIgnoreCase);
             }) ?? false;
 
-            _isLiteEdition = result;
+            lock (_lock)
+            {
+                _isLiteEdition = result;
+            }
             return result;
         }
         catch
         {
-            _isLiteEdition = false;
+            lock (_lock)
+            {
+                _isLiteEdition = false;
+            }
             return false;
         }
     }
