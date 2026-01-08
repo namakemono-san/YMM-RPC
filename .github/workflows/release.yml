@@ -21,9 +21,6 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Build
-        run: dotnet build --configuration Release
-
       - name: Publish
         run: dotnet publish --configuration Release -o publish
 

@@ -24,10 +24,10 @@
 
     <ItemGroup Condition="!Exists('$(YMM4_PATH)\YukkuriMovieMaker.Plugin.dll')">
         <Reference Include="YukkuriMovieMaker.Plugin"
-                   HintPath="..\libs\YukkuriMovieMaker.Plugin.dll"
+                   HintPath="..\..\libs\YukkuriMovieMaker.Plugin.dll"
                    Private="false" ExcludeAssets="runtime" />
         <Reference Include="YukkuriMovieMaker.Controls"
-                   HintPath="..\libs\YukkuriMovieMaker.Controls.dll"
+                   HintPath="..\..\libs\YukkuriMovieMaker.Controls.dll"
                    Private="false" ExcludeAssets="runtime" />
     </ItemGroup>
     
