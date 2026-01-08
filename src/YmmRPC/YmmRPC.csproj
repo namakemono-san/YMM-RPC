@@ -6,21 +6,38 @@
         <RootNamespace>YmmRPC</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+        <GenerateDependencyFile>false</GenerateDependencyFile>
+        <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
+        <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     </PropertyGroup>
+    
+    <ItemGroup Condition="Exists('$(YMM4_PATH)\YukkuriMovieMaker.Plugin.dll')">
+        <Reference Include="YukkuriMovieMaker.Plugin"
+                   HintPath="$(YMM4_PATH)\YukkuriMovieMaker.Plugin.dll"
+                   Private="false" ExcludeAssets="runtime" />
+        <Reference Include="YukkuriMovieMaker.Controls"
+                   HintPath="$(YMM4_PATH)\YukkuriMovieMaker.Controls.dll"
+                   Private="false" ExcludeAssets="runtime" />
+    </ItemGroup>
 
+    <ItemGroup Condition="!Exists('$(YMM4_PATH)\YukkuriMovieMaker.Plugin.dll')">
+        <Reference Include="YukkuriMovieMaker.Plugin"
+                   HintPath="..\libs\YukkuriMovieMaker.Plugin.dll"
+                   Private="false" ExcludeAssets="runtime" />
+        <Reference Include="YukkuriMovieMaker.Controls"
+                   HintPath="..\libs\YukkuriMovieMaker.Controls.dll"
+                   Private="false" ExcludeAssets="runtime" />
+    </ItemGroup>
+    
     <ItemGroup>
-        <Reference Include="YukkuriMovieMaker.Plugin" HintPath="$(YMM4_PATH)\YukkuriMovieMaker.Plugin.dll" Private="false">
-            <ExcludeAssets>runtime</ExcludeAssets>
-        </Reference>
-        <Reference Include="YukkuriMovieMaker.Controls" HintPath="$(YMM4_PATH)\YukkuriMovieMaker.Controls.dll" Private="false">
-            <ExcludeAssets>runtime</ExcludeAssets>
-        </Reference>
-        
         <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
         
         <PackageReference Include="Costura.Fody" Version="5.7.0">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
+        
         <PackageReference Include="Fody" Version="6.8.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

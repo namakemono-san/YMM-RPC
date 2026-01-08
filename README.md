@@ -3,13 +3,10 @@
 **YMM-RPC** は、**YukkuriMovieMaker4**（以下、YMM4）と **Discord** の Rich Presence を連携させるプラグインです。  
 YMM4 上で作業している状態を、Discord クライアント上のステータスとして表示できるようになります。
 
-> [!IMPORTANT]
-> 現在開発中のため、仕様変更や不具合が生じる可能性があります。
-
 ## 動作確認済みバージョン
 
-- YukkuriMovieMaker v4.47.0.5
-- YukkuriMovieMaker v4.47.0.5 Lite
+- YukkuriMovieMaker v4.48.0.3
+- YukkuriMovieMaker v4.48.0.3 Lite
 
 ## 前提条件
 

@@ -10,17 +10,16 @@ using YmmRPC.Settings;
 namespace YmmRPC;
 
 [PluginDetails(AuthorName = "namakemono-san", ContentId = "")]
-// ReSharper disable once ClassNeverInstantiated.Global
 public class YmmRpcPlugin : IPlugin, IDisposable
 {
     public string Name => "YMM-RPC";
 
     private const string ClientIdLite = "1455192227734098075";
     private const string ClientIdNormal = "1353376132732420136";
-    private const string Version = "0.3.1";
+    private const string Version = "1.0.0";
     private const int UpdateIntervalMs = 15000;
 
-    private static readonly object _lock = new();
+    private static readonly Lock Lock = new();
     private static DiscordRpcClient? _client;
     private static Timer? _updateTimer;
     private static DateTime _startTime;
@@ -36,17 +35,16 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static void InitializeClient()
     {
-        DiscordRpcClient? newClient = null;
-        bool shouldInitialize = false;
+        bool shouldInitialize;
         
-        lock (_lock)
+        lock (Lock)
         {
             if (_client is { IsDisposed: false }) return;
         }
 
         var clientId = GetIsLiteEdition() ? ClientIdLite : ClientIdNormal;
 
-        newClient = new DiscordRpcClient(clientId)
+        var newClient = new DiscordRpcClient(clientId)
         {
             Logger = new ConsoleLogger { Level = LogLevel.Warning }
         };
@@ -54,7 +52,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         newClient.OnReady += (_, e) => Console.WriteLine($"[YMM-RPC] Connected: {e.User.Username}");
         newClient.OnError += (_, e) => Console.WriteLine($"[YMM-RPC] Error: {e.Message}");
 
-        lock (_lock)
+        lock (Lock)
         {
             if (_client is { IsDisposed: false })
             {
@@ -66,27 +64,25 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             shouldInitialize = true;
         }
 
-        if (shouldInitialize)
+        if (!shouldInitialize) return;
+        
+        try
         {
-            try
+            newClient.Initialize();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[YMM-RPC] Failed to initialize client: {ex.Message}");
+            lock (Lock)
             {
-                newClient.Initialize();
+                _client = null;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[YMM-RPC] Failed to initialize client: {ex.Message}");
-                lock (_lock)
-                {
-                    _client = null;
-                }
-                newClient.Dispose();
-            }
+            newClient.Dispose();
         }
     }
 
     private static void StartUpdateTimer()
     {
-        Timer? oldTimer = null;
         Timer? newTimer = null;
         
         try
@@ -95,8 +91,9 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             {
                 SafeUpdatePresence();
             }, null, UpdateIntervalMs, UpdateIntervalMs);
-            
-            lock (_lock)
+
+            Timer? oldTimer;
+            lock (Lock)
             {
                 oldTimer = _updateTimer;
                 _updateTimer = newTimer;
@@ -134,7 +131,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         DiscordRpcClient? client;
         bool isInitialized;
         
-        lock (_lock)
+        lock (Lock)
         {
             client = _client;
             isInitialized = client is { IsInitialized: true };
@@ -302,7 +299,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             {
                 isLite = Application.Current?.Dispatcher?.Invoke(() =>
                 {
-                    var title = Application.Current?.MainWindow?.Title ?? "";
+                    var title = Application.Current.MainWindow?.Title ?? "";
                     return title.Contains("Lite", StringComparison.OrdinalIgnoreCase);
                 }) ?? false;
             }
@@ -312,12 +309,9 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             }
         }
 
-        lock (_lock)
+        lock (Lock)
         {
-            if (!_isLiteEdition.HasValue)
-            {
-                _isLiteEdition = isLite;
-            }
+            _isLiteEdition ??= isLite;
             return _isLiteEdition.Value;
         }
     }
@@ -327,10 +321,10 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        Timer? timerToDispose = null;
-        DiscordRpcClient? clientToDispose = null;
+        Timer? timerToDispose;
+        DiscordRpcClient? clientToDispose;
 
-        lock (_lock)
+        lock (Lock)
         {
             timerToDispose = _updateTimer;
             _updateTimer = null;

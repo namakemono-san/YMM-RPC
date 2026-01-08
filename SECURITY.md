@@ -8,7 +8,7 @@ If you discover a security vulnerability in YMM-RPC, please report it privately.
 
 Instead, report security issues by email:
 
-security@nmkmn.moe
+security@yuzunix.dev
 
 When reporting a security issue, please include:
 
