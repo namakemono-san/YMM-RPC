@@ -20,6 +20,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
     private const string Version = "0.3.1";
     private const int UpdateIntervalMs = 15000;
 
+    private static readonly object _lock = new();
     private static DiscordRpcClient? _client;
     private static Timer? _updateTimer;
     private static DateTime _startTime;
@@ -35,28 +36,79 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static void InitializeClient()
     {
-        if (_client is { IsDisposed: false }) return;
+        DiscordRpcClient? newClient = null;
+        bool shouldInitialize = false;
+        
+        lock (_lock)
+        {
+            if (_client is { IsDisposed: false }) return;
+        }
 
         var clientId = GetIsLiteEdition() ? ClientIdLite : ClientIdNormal;
 
-        _client = new DiscordRpcClient(clientId)
+        newClient = new DiscordRpcClient(clientId)
         {
             Logger = new ConsoleLogger { Level = LogLevel.Warning }
         };
 
-        _client.OnReady += (_, e) => Console.WriteLine($"[YMM-RPC] Connected: {e.User.Username}");
-        _client.OnError += (_, e) => Console.WriteLine($"[YMM-RPC] Error: {e.Message}");
+        newClient.OnReady += (_, e) => Console.WriteLine($"[YMM-RPC] Connected: {e.User.Username}");
+        newClient.OnError += (_, e) => Console.WriteLine($"[YMM-RPC] Error: {e.Message}");
 
-        _client.Initialize();
+        lock (_lock)
+        {
+            if (_client is { IsDisposed: false })
+            {
+                newClient.Dispose();
+                return;
+            }
+            
+            _client = newClient;
+            shouldInitialize = true;
+        }
+
+        if (shouldInitialize)
+        {
+            try
+            {
+                newClient.Initialize();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[YMM-RPC] Failed to initialize client: {ex.Message}");
+                lock (_lock)
+                {
+                    _client = null;
+                }
+                newClient.Dispose();
+            }
+        }
     }
 
     private static void StartUpdateTimer()
     {
-        _updateTimer?.Dispose();
-        _updateTimer = new Timer(_ =>
+        Timer? oldTimer = null;
+        Timer? newTimer = null;
+        
+        try
         {
-            SafeUpdatePresence();
-        }, null, UpdateIntervalMs, UpdateIntervalMs);
+            newTimer = new Timer(_ =>
+            {
+                SafeUpdatePresence();
+            }, null, UpdateIntervalMs, UpdateIntervalMs);
+            
+            lock (_lock)
+            {
+                oldTimer = _updateTimer;
+                _updateTimer = newTimer;
+            }
+            
+            oldTimer?.Dispose();
+        }
+        catch
+        {
+            newTimer?.Dispose();
+            throw;
+        }
     }
 
     private static void SafeUpdatePresence()
@@ -79,13 +131,24 @@ public class YmmRpcPlugin : IPlugin, IDisposable
 
     private static void UpdatePresence()
     {
-        if (_client is not { IsInitialized: true }) return;
+        DiscordRpcClient? client;
+        bool isInitialized;
+        
+        lock (_lock)
+        {
+            client = _client;
+            isInitialized = client is { IsInitialized: true };
+        }
+        
+        if (!isInitialized) return;
 
+        if (client == null) return;
+        
         var settings = YmmRpcSettings.Default;
 
         if (!settings.IsEnabled)
         {
-            _client.ClearPresence();
+            client.ClearPresence();
             return;
         }
 
@@ -93,7 +156,7 @@ public class YmmRpcPlugin : IPlugin, IDisposable
             ? BuildCustomPresence(settings)
             : BuildDefaultPresence();
 
-        _client.SetPresence(presence);
+        client.SetPresence(presence);
     }
 
     private static string? GetCurrentProjectName()
@@ -227,27 +290,35 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         if (_isLiteEdition.HasValue) return _isLiteEdition.Value;
 
         var exeName = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+        bool isLite;
+        
         if (exeName.Contains("Lite", StringComparison.OrdinalIgnoreCase))
         {
-            _isLiteEdition = true;
-            return true;
+            isLite = true;
         }
-
-        try
+        else
         {
-            var result = Application.Current?.Dispatcher?.Invoke(() =>
+            try
             {
-                var title = Application.Current?.MainWindow?.Title ?? "";
-                return title.Contains("Lite", StringComparison.OrdinalIgnoreCase);
-            }) ?? false;
-
-            _isLiteEdition = result;
-            return result;
+                isLite = Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    var title = Application.Current?.MainWindow?.Title ?? "";
+                    return title.Contains("Lite", StringComparison.OrdinalIgnoreCase);
+                }) ?? false;
+            }
+            catch
+            {
+                isLite = false;
+            }
         }
-        catch
+
+        lock (_lock)
         {
-            _isLiteEdition = false;
-            return false;
+            if (!_isLiteEdition.HasValue)
+            {
+                _isLiteEdition = isLite;
+            }
+            return _isLiteEdition.Value;
         }
     }
 
@@ -256,15 +327,25 @@ public class YmmRpcPlugin : IPlugin, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _updateTimer?.Dispose();
-        _updateTimer = null;
+        Timer? timerToDispose = null;
+        DiscordRpcClient? clientToDispose = null;
 
-        if (_client is { IsDisposed: false })
+        lock (_lock)
         {
-            _client.ClearPresence();
-            _client.Dispose();
+            timerToDispose = _updateTimer;
+            _updateTimer = null;
+
+            clientToDispose = _client;
+            _client = null;
         }
-        _client = null;
+
+        timerToDispose?.Dispose();
+
+        if (clientToDispose is { IsDisposed: false })
+        {
+            clientToDispose.ClearPresence();
+            clientToDispose.Dispose();
+        }
 
         GC.SuppressFinalize(this);
     }
